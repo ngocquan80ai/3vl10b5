@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bài 5: Tốc độ và Vận tốc (Vận tốc tổng hợp)</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .drag-item { cursor: grab; }
+        .drag-item:active { cursor: grabbing; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease, transform 0.3s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; transform: translate(-50%, -10px); }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+    <div id="app" class="max-w-6xl mx-auto p-4 flex flex-col h-screen overflow-hidden relative">
+        
+        <transition name="fade">
+            <div v-if="toast.show" 
+                 class="absolute top-20 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-xl text-white font-bold text-center"
+                 :class="toast.isError ? 'bg-red-600' : 'bg-green-600'">
+                <span v-html="toast.message"></span>
+            </div>
+        </transition>
+
+        <header class="bg-blue-700 text-white p-4 rounded-t-lg shadow-md flex justify-between items-center flex-shrink-0">
+            <div>
+                <h1 class="text-2xl font-bold">VẬT LÍ 10 - BÀI 5 (YÊU CẦU 12)</h1>
+                <p class="text-sm opacity-90">Tính tương đối của chuyển động - Vận tốc tổng hợp</p>
+            </div>
+            <div class="hidden md:block font-semibold">
+                Chương II: Động học
+            </div>
+        </header>
+
+        <nav class="bg-white shadow-md flex overflow-x-auto no-scrollbar rounded-b-lg mb-4 flex-shrink-0">
+            <button v-for="(tab, index) in tabs" :key="index" 
+                @click="changeTab(index + 1)"
+                class="flex-1 py-3 px-4 font-semibold text-center border-b-4 transition-colors whitespace-nowrap"
+                :class="activeTab === index + 1 ? 'border-blue-600 text-blue-600 bg-blue-50' : 'border-transparent text-gray-600 hover:bg-gray-100'">
+                {{ tab }}
+            </button>
+        </nav>
+
+        <main class="flex-1 overflow-y-auto bg-white rounded-lg shadow-md p-6 no-scrollbar relative">
+            
+            <div v-show="activeTab === 1" class="h-full flex flex-col">
+                <h2 class="text-xl font-bold text-blue-700 mb-4 border-b-2 border-blue-200 pb-2">🕹️ Hoạt động: Định vị Hệ quy chiếu (1, 2, 3)</h2>
+                <p class="italic text-gray-600 mb-4">Để giải bài toán vận tốc tổng hợp không bị nhầm lẫn, hãy kéo các đối tượng thực tế thả vào đúng vai trò vật lí quy ước.</p>
+                
+                <div class="mb-6 p-4 bg-gray-50 rounded-lg min-h-[120px] flex flex-wrap justify-center gap-4 border-2 border-dashed border-gray-300"
+                     @dragover.prevent @drop="drop('source')">
+                    <div v-for="item in sourceList" :key="item.id"
+                         draggable="true" @dragstart="dragStart(item, 'source')"
+                         class="drag-item bg-white border-2 border-blue-500 shadow-sm px-4 py-3 rounded-lg text-sm w-[calc(50%-1rem)] md:w-[calc(33%-1rem)] text-center font-bold text-blue-900 hover:bg-blue-50 transition">
+                        <span class="text-xs text-gray-400 block font-normal">[{{ item.context }}]</span>
+                        {{ item.text }}
+                    </div>
+                    <div v-if="sourceList.length === 0" class="w-full text-center text-green-600 font-bold italic py-4">
+                        🎉 Tuyệt vời! Thầy/Cô đã gán đúng vai trò các hệ quy chiếu cho mọi bài toán!
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
+                    <div class="bg-red-50 rounded-lg p-4 border-2 border-red-300 flex flex-col items-center"
+                         @dragover.prevent @drop="drop('v1')">
+                        <h3 class="text-center font-bold text-red-700 mb-2 text-lg">VẬT CHUYỂN ĐỘNG (Số 1)</h3>
+                        <div class="w-full flex flex-col gap-2 flex-1 justify-center">
+                            <div v-for="item in v1List" :key="item.id"
+                                 class="bg-white border-l-4 border-red-500 shadow p-3 rounded text-sm font-semibold text-center">
+                                <span class="text-xs text-gray-400 block">[{{ item.context }}]</span> {{ item.text }}
+                            </div>
+                            <div v-if="v1List.length === 0" class="text-gray-400 italic text-sm text-center py-4 border-2 border-dashed rounded bg-white">Thả Vật (1) vào đây...</div>
+                        </div>
+                    </div>
+                    <div class="bg-yellow-50 rounded-lg p-4 border-2 border-yellow-400 flex flex-col items-center"
+                         @dragover.prevent @drop="drop('v2')">
+                        <h3 class="text-center font-bold text-yellow-800 mb-2 text-lg">HỆ QC CHUYỂN ĐỘNG (Số 2)</h3>
+                        <div class="w-full flex flex-col gap-2 flex-1 justify-center">
+                            <div v-for="item in v2List" :key="item.id"
+                                 class="bg-white border-l-4 border-yellow-500 shadow p-3 rounded text-sm font-semibold text-center">
+                                <span class="text-xs text-gray-400 block">[{{ item.context }}]</span> {{ item.text }}
+                            </div>
+                            <div v-if="v2List.length === 0" class="text-gray-400 italic text-sm text-center py-4 border-2 border-dashed rounded bg-white">Thả Hệ QCĐ (2) vào đây...</div>
+                        </div>
+                    </div>
+                    <div class="bg-green-50 rounded-lg p-4 border-2 border-green-300 flex flex-col items-center"
+                         @dragover.prevent @drop="drop('v3')">
+                        <h3 class="text-center font-bold text-green-700 mb-2 text-lg">HỆ QC ĐỨNG YÊN (Số 3)</h3>
+                        <div class="w-full flex flex-col gap-2 flex-1 justify-center">
+                            <div v-for="item in v3List" :key="item.id"
+                                 class="bg-white border-l-4 border-green-500 shadow p-3 rounded text-sm font-semibold text-center">
+                                <span class="text-xs text-gray-400 block">[{{ item.context }}]</span> {{ item.text }}
+                            </div>
+                            <div v-if="v3List.length === 0" class="text-gray-400 italic text-sm text-center py-4 border-2 border-dashed rounded bg-white">Thả Hệ ĐY (3) vào đây...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div v-show="activeTab === 2">
+                <h2 class="text-xl font-bold text-blue-700 mb-4 border-b-2 border-blue-200 pb-2">📚 Công thức và Phép chiếu đại số</h2>
+                
+                <div class="flex flex-col lg:flex-row gap-6 items-start">
+                    <div class="flex-1 space-y-6">
+                        <div class="bg-gray-50 border border-gray-200 p-5 rounded-lg shadow-sm">
+                            <h3 class="font-bold text-gray-800 text-lg mb-2">1. Định luật cộng vận tốc</h3>
+                            <p class="text-sm text-gray-700 mb-3">Vận tốc tuyệt đối bằng tổng vectơ của vận tốc tương đối và vận tốc kéo theo:</p>
+                            <div class="bg-white border border-blue-200 p-3 rounded flex items-center justify-center shadow-inner mb-2">
+                                <span class="text-2xl font-bold text-blue-700">$$\vec{v}_{13} = \vec{v}_{12} + \vec{v}_{23}$$</span>
+                            </div>
+                            <ul class="list-disc ml-5 space-y-1 text-xs text-gray-600">
+                                <li>$\vec{v}_{13}$: Vận tốc của vật so với hệ quy chiếu đứng yên (Vận tốc tuyệt đối).</li>
+                                <li>$\vec{v}_{12}$: Vận tốc của vật so với hệ quy chiếu chuyển động (Vận tốc tương đối).</li>
+                                <li>$\vec{v}_{23}$: Vận tốc của hệ quy chiếu chuyển động so với hệ quy chiếu đứng yên (Vận tốc kéo theo).</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="bg-blue-50 border-l-4 border-blue-600 p-4 rounded-lg shadow-sm space-y-2">
+                            <h3 class="font-bold text-blue-800 text-md">2. Các kịch bản đại số phổ biến</h3>
+                            <div class="text-xs space-y-2 text-gray-800">
+                                <div class="bg-white p-2 rounded border flex justify-between items-center">
+                                    <span class="font-bold text-green-600">Xuôi dòng (Cùng chiều)</span>
+                                    <span class="font-mono font-bold text-sm">$v_{13} = v_{12} + v_{23}$</span>
+                                </div>
+                                <div class="bg-white p-2 rounded border flex justify-between items-center">
+                                    <span class="font-bold text-orange-600">Ngược dòng (Ngược chiều)</span>
+                                    <span class="font-mono font-bold text-sm">$v_{13} = |v_{12} - v_{23}|$</span>
+                                </div>
+                                <div class="bg-white p-2 rounded border flex justify-between items-center">
+                                    <span class="font-bold text-blue-600">Bơi ngang vuông góc phương</span>
+                                    <span class="font-mono font-bold text-sm">$v_{13} = \sqrt{v_{12}^2 + v_{23}^2}$</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="w-full lg:w-5/12 flex flex-col items-center">
+                        <div class="w-full rounded-lg border border-gray-300 shadow bg-white p-4 flex flex-col items-center justify-center min-h-[260px]">
+                            <svg viewBox="0 0 300 200" class="w-full h-auto">
+                                <defs>
+                                    <marker id="arrBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#3b82f6"/></marker>
+                                    <marker id="arrYellow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#eab308"/></marker>
+                                    <marker id="arrRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#ef4444"/></marker>
+                                </defs>
+                                <g>
+                                    <rect x="20" y="30" width="260" height="140" fill="#f0f9ff" stroke="#bae6fd" stroke-width="2"/>
+                                    
+                                    <line x1="50" y1="50" x2="190" y2="50" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+                                    <line x1="190" y1="150" x2="190" y2="50" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4,4"/>
+                                    
+                                    <line x1="50" y1="150" x2="50" y2="56" stroke="#3b82f6" stroke-width="3" marker-end="url(#arrBlue)"/>
+                                    <text x="55" y="100" fill="#2563eb" font-weight="bold" font-size="11">v₁₂ (Thuyền/Nước)</text>
+                                    
+                                    <line x1="50" y1="150" x2="184" y2="150" stroke="#eab308" stroke-width="3" marker-end="url(#arrYellow)"/>
+                                    <text x="90" y="165" fill="#ca8a04" font-weight="bold" font-size="11">v₂₃ (Dòng nước)</text>
+                                    
+                                    <line x1="50" y1="150" x2="186" y2="53" stroke="#ef4444" stroke-width="4" marker-end="url(#arrRed)"/>
+                                    <text x="110" y="90" fill="#dc2626" font-weight="bold" font-size="12" transform="rotate(-35, 110, 90)">v₁₃ (Tuyệt đối so với bờ)</text>
+                                    
+                                    <circle cx="50" cy="150" r="5" fill="#111827"/>
+                                </g>
+                            </svg>
+                        </div>
+                        <div class="mt-2 bg-yellow-50 border-l-4 border-yellow-500 p-3 w-full text-xs font-medium text-gray-800 shadow-sm rounded-r">
+                            💡 Sơ đồ cộng vectơ theo **Quy tắc hình chữ nhật** khi ca nô bơi vuông góc với dòng chảy. Vận tốc thực tế so với bờ $\vec{v}_{13}$ bị đẩy lệch góc chéo.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div v-show="activeTab === 3" class="h-full flex flex-col">
+                <h2 class="text-xl font-bold text-blue-700 mb-4 border-b-2 border-blue-200 pb-2">🔬 Phòng thí nghiệm Động lực học Dòng sông</h2>
+                
+                <div class="bg-gray-50 p-4 rounded-lg mb-4 flex flex-col md:flex-row gap-6 items-center border border-gray-200 flex-shrink-0">
+                    <div class="flex-1 w-full space-y-3">
+                        <div>
+                            <label class="block font-bold text-xs mb-1 text-gray-700">Hướng điều khiển bánh lái ca nô:</label>
+                            <select v-model="riverMode" class="w-full p-2 border border-gray-300 rounded text-sm font-semibold focus:ring-2 focus:ring-blue-500">
+                                <option value="down">Chế độ 1: Lái xuôi dòng (Cùng chiều nước)</option>
+                                <option value="up">Chế độ 2: Lái ngược dòng (Ngược chiều nước)</option>
+                                <option value="cross">Chế độ 3: Lái bơi vuông góc qua sông</option>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-xs font-bold text-gray-600 flex justify-between">Vận tốc Ca nô/Nước ($v_{12}$): <span class="text-blue-600">{{ v12 }} km/h</span></label>
+                                <input type="range" v-model="v12" min="2" max="20" step="1" class="w-full accent-blue-600 cursor-pointer">
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-gray-600 flex justify-between">Vận tốc Nước/Bờ ($v_{23}$): <span class="text-yellow-600">{{ v23 }} km/h</span></label>
+                                <input type="range" v-model="v23" min="0" max="10" step="1" class="w-full accent-yellow-600 cursor-pointer">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="w-full md:w-5/12 bg-white border border-gray-300 p-4 rounded-lg shadow-inner flex flex-col gap-2">
+                        <div class="text-center font-bold text-xs text-gray-400 tracking-wider">KẾT QUẢ ĐO REAL-TIME</div>
+                        <div class="flex justify-between items-center text-sm border-b pb-1">
+                            <span>Vận tốc Ca nô với bờ ($v_{13}$):</span>
+                            <span class="text-xl font-bold text-red-600"><span>{{ v13Calculated }}</span> <span class="text-xs">km/h</span></span>
+                        </div>
+                        <div class="bg-gray-900 text-green-400 font-mono text-center text-xs py-1.5 rounded">
+                            Phép tính: <span class="text-white font-bold">{{ mathExpression }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex-1 bg-sky-50 border-2 border-sky-200 rounded-lg shadow-inner relative flex items-center justify-center overflow-hidden">
+                    <svg viewBox="0 0 400 200" class="w-full h-full max-h-[350px]">
+                        <defs>
+                            <marker id="mBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker>
+                            <marker id="mYellow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#ca8a04"/></marker>
+                            <marker id="mRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker>
+                        </defs>
+                        
+                        <g stroke="#bae6fd" stroke-width="2" stroke-dasharray="20,10">
+                            <line x1="-50" y1="40" x2="450" y2="40" />
+                            <line x1="-20" y1="100" x2="480" y2="100" />
+                            <line x1="-40" y1="160" x2="440" y2="160" />
+                        </g>
+                        
+                        <rect x="0" y="0" width="400" height="20" fill="#e5e7eb" stroke="#d1d5db"/>
+                        <rect x="0" y="180" width="400" height="20" fill="#e5e7eb" stroke="#d1d5db"/>
+                        
+                        <line x1="50" y1="120" :x2="50 + Number(v23)*10" y2="120" stroke="#eab308" stroke-width="3" marker-end="url(#mYellow)"/>
+                        <text :x="50 + Number(v23)*5" y="115" fill="#ca8a04" font-weight="bold" font-size="10">v23</text>
+                        
+                        <g v-if="riverMode === 'down'">
+                            <line :x1="50 + Number(v23)*10" y1="120" :x2="50 + Number(v23)*10 + Number(v12)*10" y2="120" stroke="#3b82f6" stroke-width="3" marker-end="url(#mBlue)"/>
+                            <line x1="50" y1="140" :x2="50 + (Number(v23) + Number(v12))*10" y2="140" stroke="#ef4444" stroke-width="4" marker-end="url(#mRed)"/>
+                        </g>
+                        
+                        <g v-if="riverMode === 'up'">
+                            <line x1="50" y1="120" :x2="50 - Number(v12)*10" y2="120" stroke="#3b82f6" stroke-width="3" marker-end="url(#mBlue)"/>
+                            <line x1="50" y1="140" :x2="50 + (Number(v23) - Number(v12))*10" y2="140" stroke="#ef4444" stroke-width="4" marker-end="url(#mRed)"/>
+                        </g>
+                        
+                        <g v-if="riverMode === 'cross'">
+                            <line x1="50" y1="120" x2="50" :y2="120 - Number(v12)*5" stroke="#3b82f6" stroke-width="3" marker-end="url(#mBlue)"/>
+                            <line x1="50" y1="120" :x2="50 + Number(v23)*10" :y2="120 - Number(v12)*5" stroke="#ef4444" stroke-width="4" marker-end="url(#mRed)"/>
+                            <line :x1="50 + Number(v23)*10" y1="120" :x2="50 + Number(v23)*10" :y2="120 - Number(v12)*5" stroke="#9ca3af" stroke-width="1" stroke-dasharray="2,2"/>
+                            <line x1="50" :y2="120 - Number(v12)*5" :x2="50 + Number(v23)*10" :y2="120 - Number(v12)*5" stroke="#9ca3af" stroke-width="1" stroke-dasharray="2,2"/>
+                        </g>
+                        
+                        <circle cx="50" cy="120" r="4" fill="#111827"/>
+                    </svg>
+                </div>
+            </div>
+
+            <div v-show="activeTab === 4">
+                <h2 class="text-xl font-bold text-blue-700 mb-4 border-b-2 border-blue-200 pb-2">📝 Trắc nghiệm Phản hồi sâu</h2>
+                
+                <div class="space-y-6">
+                    <div v-for="(q, qIndex) in questions" :key="q.id" class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+                        <p class="font-bold text-gray-800 mb-3">Câu {{ qIndex + 1 }}: <span v-html="q.text"></span></p>
+                        
+                        <div class="flex flex-col gap-2">
+                            <button v-for="(opt, oIndex) in q.options" :key="oIndex"
+                                @click="selectOption(q.id, oIndex)"
+                                class="text-left px-4 py-3 border rounded-md transition-all duration-200"
+                                :class="getOptionClass(q, oIndex)">
+                                <span v-html="opt.text"></span>
+                            </button>
+                        </div>
+                        
+                        <div v-if="q.selected !== null" 
+                             class="mt-3 p-4 rounded-md text-sm border font-medium leading-relaxed"
+                             :class="q.options[q.selected].isCorrect ? 'bg-green-100 border-green-400 text-green-800' : 'bg-red-100 border-red-400 text-red-900'">
+                            💡 <strong>Giải thích:</strong> <span v-html="q.options[q.selected].feedback"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </main>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted, nextTick } = Vue;
+
+        createApp({
+            setup() {
+                const tabs = ['1. Khởi động', '2. Lý thuyết', '3. Mô phỏng', '4. Trắc nghiệm'];
+                const activeTab = ref(1);
+
+                const triggerMathJax = () => {
+                    nextTick(() => {
+                        if (window.MathJax && MathJax.typesetClear) {
+                            MathJax.typesetClear();
+                            MathJax.typesetPromise().catch((err) => console.log(err.message));
+                        }
+                    });
+                };
+
+                const changeTab = (tabIndex) => {
+                    activeTab.value = tabIndex;
+                    triggerMathJax();
+                };
+
+                // --- TAB 1: LOGIC KÉO THẢ PHÂN LOẠI HỆ QUY CHIẾU ---
+                const draggedItem = ref(null);
+                const toast = ref({ show: false, message: '', isError: false });
+                let toastTimer = null;
+
+                const showToast = (msg, isError = false) => {
+                    toast.value = { show: true, message: msg, isError };
+                    if (toastTimer) clearTimeout(toastTimer);
+                    toastTimer = setTimeout(() => { toast.value.show = false; }, 2500);
+                };
+
+                const sourceList = ref([
+                    { id: 1, text: 'Chiếc ca nô', type: 'v1', context: 'Bài toán Sông' },
+                    { id: 2, text: 'Dòng nước chảy', type: 'v2', context: 'Bài toán Sông' },
+                    { id: 3, text: 'Bờ sông cố định', type: 'v3', context: 'Bài toán Sông' },
+                    { id: 4, text: 'Người hành khách', type: 'v1', context: 'Bài toán Tàu' },
+                    { id: 5, text: 'Đoàn tàu chuyển động', type: 'v2', context: 'Bài toán Tàu' },
+                    { id: 6, text: 'Sân ga cố định', type: 'v3', context: 'Bài toán Tàu' }
+                ].sort(() => Math.random() - 0.5));
+                
+                const v1List = ref([]);
+                const v2List = ref([]);
+                const v3List = ref([]);
+
+                const dragStart = (item, source) => { draggedItem.value = { item, source }; };
+                
+                const drop = (target) => {
+                    if (!draggedItem.value) return;
+                    const { item, source } = draggedItem.value;
+                    
+                    if (target !== 'source' && target !== item.type) {
+                        showToast('❌ Nhầm vai trò rồi! Hãy phân tích kỹ thực thể này thuộc số 1, 2 hay 3.', true);
+                        draggedItem.value = null; return;
+                    }
+
+                    if (target !== 'source') showToast('✅ Hoàn toàn chính xác!', false);
+                    
+                    if (source === 'source') sourceList.value = sourceList.value.filter(i => i.id !== item.id);
+                    if (source === 'v1') v1List.value = v1List.value.filter(i => i.id !== item.id);
+                    if (source === 'v2') v2List.value = v2List.value.filter(i => i.id !== item.id);
+                    if (source === 'v3') v3List.value = v3List.value.filter(i => i.id !== item.id);
+                    
+                    if (target === 'v1') v1List.value.push(item);
+                    if (target === 'v2') v2List.value.push(item);
+                    if (target === 'v3') v3List.value.push(item);
+                    if (target === 'source') sourceList.value.push(item);
+                    
+                    draggedItem.value = null;
+                };
+
+                // --- TAB 3: MÔ PHỎNG VẬN TỐC TỔNG HỢP ---
+                const riverMode = ref('down');
+                const v12 = ref(12);
+                const v23 = ref(4);
+
+                const v13Calculated = computed(() => {
+                    const m12 = parseFloat(v12.value);
+                    const m23 = parseFloat(v23.value);
+                    if (riverMode.value === 'down') return (m12 + m23).toFixed(1);
+                    if (riverMode.value === 'up') return Math.abs(m12 - m23).toFixed(1);
+                    if (riverMode.value === 'cross') return Math.sqrt(m12*m12 + m23*m23).toFixed(1);
+                    return 0;
+                });
+
+                const mathExpression = computed(() => {
+                    if (riverMode.value === 'down') return `${v12.value} + ${v23.value} = ${v13Calculated.value}`;
+                    if (riverMode.value === 'up') return `${v12.value} - ${v23.value} = ${v13Calculated.value}`;
+                    if (riverMode.value === 'cross') return `√(${v12.value}² + ${v23.value}²) = ${v13Calculated.value}`;
+                    return '';
+                });
+
+                // --- TAB 4: TRẮC NGHIỆM ---
+                const questions = ref([
+                    {
+                        id: 1,
+                        text: 'Một ca nô chạy xuôi dòng với vận tốc $20~km/h$ so với dòng nước, nước chảy với vận tốc $5~km/h$ so với bờ. Vận tốc của ca nô so với bờ là:',
+                        options: [
+                            { text: 'A. $15~km/h$.', isCorrect: false, feedback: 'Bẫy: Bạn đã nhầm với kịch bản chạy ngược dòng ($v_{13} = v_{12} - v_{23}$).' },
+                            { text: 'B. $25~km/h$.', isCorrect: true, feedback: 'Đúng: Khi xuôi dòng, vận tốc tổng hợp bằng tổng độ lớn: $v_{13} = v_{12} + v_{23} = 20 + 5 = 25~km/h$.' },
+                            { text: 'C. $20.6~km/h$.', isCorrect: false, feedback: 'Bẫy: Bạn đã sử dụng định lí Pitago của trường hợp chuyển động vuông góc.' },
+                            { text: 'D. $5~km/h$.', isCorrect: false, feedback: 'Bẫy: Đây chỉ là vận tốc kéo theo của dòng nước.' }
+                        ],
+                        selected: null
+                    },
+                    {
+                        id: 2,
+                        text: 'Một ca nô chạy vuông góc qua một khúc sông. Vận tốc của ca nô so với nước là $4~m/s$, nước chảy với vận tốc $3~m/s$ so với bờ. Vận tốc tổng hợp của ca nô so với bờ là:',
+                        options: [
+                            { text: 'A. $7~m/s$.', isCorrect: false, feedback: 'Bẫy: Bạn đã cộng trực tiếp đại số giống trường hợp đi xuôi dòng.' },
+                            { text: 'B. $1~m/s$.', isCorrect: false, feedback: 'Bẫy: Bạn đã trừ đại số giống trường hợp đi ngược dòng.' },
+                            { text: 'C. $5~m/s$.', isCorrect: true, feedback: 'Đúng: Do phương chuyển động vuông góc, ta dùng định lí Pitago: $v_{13} = \\sqrt{v_{12}^2 + v_{23}^2} = \\sqrt{4^2 + 3^2} = 5~m/s$.' },
+                            { text: 'D. $2~m/s$.', isCorrect: false, feedback: 'Bẫy: Tính toán sai quy tắc khai căn Pitago.' }
+                        ],
+                        selected: null
+                    },
+                    {
+                        id: 3,
+                        text: 'Một hành khách đi bộ trên băng chuyền hành lý ở sân bay với vận tốc $1~m/s$ so với băng chuyền. Băng chuyền chuyển động với vận tốc $2~m/s$ so với mặt đất. Vận tốc của hành khách so với mặt đất là:',
+                        options: [
+                            { text: 'A. $3~m/s$ (nếu đi cùng chiều) và $1~m/s$ (nếu đi ngược chiều).', isCorrect: true, feedback: 'Đúng: Vận tốc tổng hợp phụ thuộc vào hướng bước đi của người so với chiều di chuyển của băng chuyền.' },
+                            { text: 'B. Luôn luôn là $3~m/s$ trong mọi kịch bản.', isCorrect: false, feedback: 'Bẫy: Bạn đã bỏ qua tính hướng của đại lượng vectơ khi người đó quay đầu đi ngược chiều băng chuyền.' },
+                            { text: 'C. Luôn luôn là $1~m/s$.', isCorrect: false, feedback: 'Bẫy: Thiếu sót trường hợp cộng hưởng vận tốc khi đi cùng chiều.' },
+                            { text: 'D. Luôn luôn là $\\sqrt{5}~m/s$.', isCorrect: false, feedback: 'Bẫy: Chỉ đúng nếu hành khách đi vuông góc cắt ngang băng chuyền.' }
+                        ],
+                        selected: null
+                    },
+                    {
+                        id: 4,
+                        text: 'Gọi số 1 là ca nô, số 2 là dòng nước, số 3 là bờ sông cố định. Biểu thức tính vận tốc của ca nô so với bờ khi chạy **ngược dòng nước** là:',
+                        options: [
+                            { text: 'A. $v_{13} = v_{12} + v_{23}$.', isCorrect: false, feedback: 'Bẫy: Đây là phương trình độ lớn khi chuyển động xuôi dòng.' },
+                            { text: 'B. $v_{13} = v_{12} - v_{23}$ (với $v_{12} &gt; v_{23}$).', isCorrect: true, feedback: 'Đúng: Khi ngược dòng, hai vectơ vận tốc ngược chiều nên giá trị đại số bằng hiệu độ lớn.' },
+                            { text: 'C. $v_{13} = v_{23} - v_{12}$.', isCorrect: false, feedback: 'Bẫy: Nếu vận tốc nước lớn hơn ca nô, ca nô sẽ bị đẩy lùi về phía sau, không thể tiến về phía trước.' },
+                            { text: 'D. $v_{13} = \\sqrt{v_{12}^2 - v_{23}^2}$.', isCorrect: false, feedback: 'Bẫy: Sai lệch hoàn toàn công thức hình học vectơ.' }
+                        ],
+                        selected: null
+                    }
+                ]);
+
+                const selectOption = (qId, optIdx) => {
+                    const q = questions.value.find(q => q.id === qId);
+                    if (q.selected === null) {
+                        q.selected = optIdx;
+                        triggerMathJax(); 
+                    }
+                };
+
+                const getOptionClass = (q, oIndex) => {
+                    if (q.selected === null) return 'bg-white hover:bg-gray-100 border-gray-300';
+                    if (q.selected === oIndex) return q.options[oIndex].isCorrect ? 'bg-green-600 text-white border-green-700' : 'bg-red-500 text-white border-red-600';
+                    if (q.options[oIndex].isCorrect) return 'bg-green-100 border-green-500 text-green-900 font-bold'; 
+                    return 'bg-gray-100 border-gray-200 opacity-60'; 
+                };
+
+                onMounted(() => {
+                    triggerMathJax();
+                });
+
+                return {
+                    tabs, activeTab, changeTab,
+                    sourceList, v1List, v2List, v3List, dragStart, drop,
+                    toast,
+                    riverMode, v12, v23, v13Calculated, mathExpression,
+                    questions, selectOption, getOptionClass
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
